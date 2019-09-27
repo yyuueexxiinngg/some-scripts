@@ -1,6 +1,7 @@
 // Fake register for referrer to get warp plus bandwidth
 const referrer = "########## AFF ID ##########";
 const timesToLoop = 10;
+const retryTimes = 5;
 
 const https = require("https");
 const zlib = require("zlib");
@@ -11,7 +12,17 @@ async function init() {
       console.log(i + 1, "OK");
     } else {
       console.log(i + 1, "Error");
-      return;
+      for (let r = 0; r < retryTimes; r++) {
+        if (await run()) {
+          console.log(i + 1, "Retry #" + (r + 1), "OK");
+          break;
+        } else {
+          console.log(i + 1, "Retry #" + (r + 1), "Error");
+          if (r === retryTimes - 1) {
+            return;
+          }
+        }
+      }
     }
   }
 }

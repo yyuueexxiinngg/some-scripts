@@ -6,6 +6,7 @@ import string
 
 referrer = "########### AFF ID ###########"
 timesToLoop = 10
+retryTimes = 5
 
 
 def genString(stringLength):
@@ -15,7 +16,8 @@ def genString(stringLength):
 
 url = 'https://api.cloudflareclient.com/v0a745/reg'
 
-for i in range(timesToLoop):
+
+def run():
     install_id = genString(11)
     body = {"key": "{}=".format(genString(42)),
             "install_id": install_id,
@@ -36,8 +38,21 @@ for i in range(timesToLoop):
                }
 
     r = requests.post(url, data=bodyString, headers=headers)
-    if r.status_code == 200:
-        print(i+1, "OK")
+    return r
+
+
+for i in range(timesToLoop):
+    result = run()
+    if result.status_code == 200:
+        print(i + 1, "OK")
     else:
-        print(i+1, "Error")
-        break
+        print(i + 1, "Error")
+        for r in range(retryTimes):
+            retry = run()
+            if retry.status_code == 200:
+                print(i + 1, "Retry #" + str(r + 1), "OK")
+                break
+            else:
+                print(i + 1, "Retry #" + str(r + 1), "Error")
+                if r == retryTimes - 1:
+                    exit()
