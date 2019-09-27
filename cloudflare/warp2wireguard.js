@@ -1,3 +1,4 @@
+// Original link: https://github.com/yyuueexxiinngg/some-scripts/blob/master/cloudflare/warp2wireguard.js
 const publicKey = "Put your WireGuard public key here";
 const privateKey = "Put your WireGuard private key here";
 const referrer = "Must put referrer id here to get start with 1 GB";
