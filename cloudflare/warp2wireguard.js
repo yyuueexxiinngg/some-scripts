@@ -1,18 +1,9 @@
-// Original link: https://github.com/yyuueexxiinngg/some-scripts/blob/master/cloudflare/warp2wireguard.js
 const publicKey = "Put your WireGuard public key here";
 const privateKey = "Put your WireGuard private key here";
-const referrer = "Must put referrer id here to get start with 1 GB";
+const referrer = "Put referrer id here to get 1GB quota start with warp plus";
 
-if (
-  !publicKey.endsWith("=") ||
-  !privateKey.endsWith("=") ||
-  !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
-    referrer
-  )
-) {
-  console.error(
-    "Please specify WireGuard private key, public key and referrer id"
-  );
+if (!publicKey.endsWith("=") || !privateKey.endsWith("=")) {
+  console.error("Please specify WireGuard private key, public key.");
   process.exit(1);
 }
 
@@ -32,7 +23,8 @@ async function run() {
     warpConf = {
       id: null,
       publicKey: publicKey, // WireGuard pubic key
-      token: null // Cloudflare access token
+      token: null, // Cloudflare access token
+      isWarpPlusEnabled: null
     };
   }
 
@@ -45,14 +37,29 @@ async function run() {
     console.log("Getting user data...");
     const res = await getInfo(warpConf.id, warpConf.token);
     userData = res.result;
+    if (
+      !warpConf.isWarpPlusEnablsed && // If saved record indicate using free version of Cloudflare Warp
+      userData.account &&
+      (userData.account.premium_data || data.account.warp_plus)
+    ) {
+      warpConf.isWarpPlusEnabled = true;
+      fs.writeFileSync("./warp-conf.json", JSON.stringify(warpConf));
+    }
     console.log("Successfully fetched data:");
     if (process.argv[2] && process.argv[2] === "q") {
-      console.log(
-        "\x1b[36m%s\x1b[0m",
-        "BANDWIDTH LEFT:",
-        userData.account.quota / 1000000000,
-        "GB"
-      );
+      if (warpConf.isWarpPlusEnabled) {
+        console.log(
+          "\x1b[36m%s\x1b[0m",
+          "WARP PLUS BANDWIDTH LEFT:",
+          userData.account.quota / 1000000000,
+          "GB"
+        );
+      } else {
+        console.log(
+          "\x1b[36m%s\x1b[0m",
+          "You are using free version of Cloudflare Warp, no bandwidth limit, you can referrer others using your ID to obtain quota to upgrade to Cloudflare Warp Plus."
+        );
+      }
       process.exit(0);
     }
     console.log(util.inspect(userData, false, null, true));
@@ -80,12 +87,20 @@ AllowedIPs = 0.0.0.0/0
   console.log(
     "Config saved, check wireguard-cloudflare-warp.conf in current dir."
   );
-  console.log(
-    "\x1b[36m%s\x1b[0m",
-    "BANDWIDTH LEFT:",
-    userData.account.quota / 1000000000,
-    "GB"
-  );
+
+  if (warpConf.isWarpPlusEnabled) {
+    console.log(
+      "\x1b[36m%s\x1b[0m",
+      "WARP PLUS BANDWIDTH LEFT:",
+      userData.account.quota / 1000000000,
+      "GB"
+    );
+  } else {
+    console.log(
+      "\x1b[36m%s\x1b[0m",
+      "You are using free version of Cloudflare Warp, no bandwidth limit, you can referrer others using your ID to obtain quota to upgrade to Cloudflare Warp Plus."
+    );
+  }
 }
 
 async function getInfo(id, token) {
@@ -122,7 +137,11 @@ async function reg() {
       key: publicKey,
       install_id: install_id,
       fcm_token: `${install_id}:APA91b${genString(134)}`,
-      referrer: referrer,
+      referrer: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
+        referrer
+      )
+        ? referrer
+        : "",
       warp_enabled: true,
       tos: new Date().toISOString().replace("Z", "+08:00"),
       type: "Android",
@@ -150,6 +169,9 @@ async function reg() {
       const data = result.payload;
       warpConf.id = data.id;
       warpConf.token = data.token;
+
+      if (data.account && (data.account.premium_data || data.account.warp_plus))
+        warpConf.isWarpPlusEnabled = true;
 
       fs.writeFileSync("./warp-conf.json", JSON.stringify(warpConf));
 
@@ -198,3 +220,4 @@ function genString(length) {
 }
 
 run();
+// Original link: https://github.com/yyuueexxiinngg/some-scripts/blob/master/cloudflare/warp2wireguard.js
