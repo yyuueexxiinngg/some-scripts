@@ -85,10 +85,14 @@ async function run() {
 }
 
 function genString(length) {
-  // https://gist.github.com/6174/6062387#gistcomment-2651745
-  return [...Array(length)]
-    .map(i => (~~(Math.random() * 36)).toString(36))
-    .join("");
+  // https://stackoverflow.com/a/1349426/11860316
+  let result = "";
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const charactersLength = characters.length;
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
 }
 
 init();
