@@ -47,3 +47,7 @@ This script will create `warp-conf.json` at running directory for saving the use
 #### To get your bandwidth quota info, run `node warp2wireguard.js q`
 
 Generated WireGuard configuration file will be saved at running directory named `wireguard-cloudflare-warp.conf`
+
+### Retrieve_Cloudflare_Warp_Bandwidth.shortcut
+
+iOS shortcut to retrieve bandwidth quota, tested on iOS 12.4
