@@ -11,7 +11,8 @@
     "no-console": {
       "severity": "warning"
     },
-    "interface-name": false
+    "interface-name": false,
+    "object-literal-sort-keys": false
   },
   "rulesDirectory": [
     "tslint-plugin-prettier"
