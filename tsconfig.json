@@ -6,16 +6,16 @@
     "target": "es6",
     "noImplicitAny": true,
     "moduleResolution": "node",
-    "sourceMap": true,
-    "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "*": [
-        "node_modules/*"
-      ]
-    }
+    "sourceMap": false,
+    "rootDir": "./",
+    "baseUrl": "."
   },
   "include": [
-    "./*"
+    "**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "types.ts",
+    "**/*.spec.ts"
   ]
 }

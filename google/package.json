@@ -1,0 +1,13 @@
+{
+  "name": "google",
+  "version": "1.0.0",
+  "description": "Google related node scripts",
+  "main": "index.js",
+  "repository": "https://github.com/yyuueexxiinngg/some-scripts/google",
+  "author": "yyuueexxiinngg@outlook.com",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "googleapis": "^44.0.0"
+  }
+}

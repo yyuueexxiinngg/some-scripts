@@ -1,13 +1,18 @@
 {
   "defaultSeverity": "error",
   "extends": [
-    "tslint:latest",
+    "tslint:recommended",
     "tslint-config-prettier"
   ],
   "jsRules": {},
   "rules": {
     "trailing-comma": [false],
-    "prettier": true
+    "prettier": true,
+    "no-console": {
+      "severity": "warning"
+    },
+    "interface-name": false,
+    "object-literal-sort-keys": false
   },
   "rulesDirectory": [
     "tslint-plugin-prettier"
