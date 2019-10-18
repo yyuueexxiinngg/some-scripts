@@ -32,19 +32,19 @@ class GoogleClient {
    * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
    */
   public async getAccessToken(oAuth2Client: OAuth2Client) {
-    const authUrl = oAuth2Client.generateAuthUrl({
-      access_type: "offline",
-      scope: this.options.scopes[0]
-    });
-    console.log("Authorize this app by visiting this url:", authUrl);
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-    rl.question("Enter the code from that page here: ", (code: string) => {
-      rl.close();
+    return new Promise(resolve => {
+      const authUrl = oAuth2Client.generateAuthUrl({
+        access_type: "offline",
+        scope: this.options.scopes[0]
+      });
+      console.log("Authorize this app by visiting this url:", authUrl);
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+      rl.question("Enter the code from that page here: ", (code: string) => {
+        rl.close();
 
-      return new Promise(resolve => {
         oAuth2Client.getToken(code, (err: any, token: any) => {
           if (err) {
             return console.error("Error retrieving access token", err);
@@ -69,10 +69,11 @@ class GoogleClient {
         this.oAuth2Client.setCredentials(
           JSON.parse(fs.readFileSync(this.options.tokenPath).toString())
         );
+        resolve();
       } else {
         await this.getAccessToken(this.oAuth2Client);
+        resolve();
       }
-      resolve();
     });
   }
 }
