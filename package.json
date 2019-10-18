@@ -1,26 +1,28 @@
 {
-  "name": "node-script",
+  "name": "some-scripts",
   "version": "1.0.0",
   "main": "dist/index.js",
   "author": "yyuueexxiinngg@outlook.com",
   "license": "MIT",
   "private": true,
   "scripts": {
+    "lint": "tslint -c tslint.json -p tsconfig.json --fix",
     "prebuild": "tslint -c tslint.json -p tsconfig.json --fix",
-    "build": "tsc",
-    "prestart": "npm run build",
-    "lint": "tslint -c tslint.json -p tsconfig.json --fix"
-  },
-  "devDependencies": {
-    "typescript": "^3.6.3"
+    "build": "tsc"
   },
   "dependencies": {
     "axios": "^0.19.0",
+    "minimist": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/minimist": "^1.2.0",
+    "@types/node": "^12.7.4",
     "prettier": "^1.18.2",
     "ts-node": "^8.4.1",
     "tsconfig-paths": "^3.8.0",
     "tslint": "^5.20.0",
     "tslint-config-prettier": "^1.18.0",
-    "tslint-plugin-prettier": "^2.0.1"
+    "tslint-plugin-prettier": "^2.0.1",
+    "typescript": "^3.6.3"
   }
 }
