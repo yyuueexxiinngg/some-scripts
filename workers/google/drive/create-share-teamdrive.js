@@ -33,7 +33,7 @@ var html = `
       integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
       crossorigin="anonymous"
     ></script>
-  <!--源码地址: https://github.com/yyuueexxiinngg/some-scripts/workers/google/drive/create-share-teamdrive.js-->
+  <!--源码地址: https://github.com/yyuueexxiinngg/some-scripts/blob/master/workers/google/drive/create-share-teamdrive.js-->
   </head>
   <body>
     <div id="app">
@@ -136,7 +136,7 @@ var html = `
       <div class="footer-copyright text-center py-3">
         © 2019 Copyright:
         <a
-          href="https://github.com/yyuueexxiinngg/some-scripts/workers/google/drive/create-share-teamdrive.js"
+          href="https://github.com/yyuueexxiinngg/some-scripts/blob/master/workers/google/drive/create-share-teamdrive.js"
         >
           yyuueexxiinngg
         </a>
@@ -160,7 +160,7 @@ var html = `
       }
     });
 
-    $.get("https://teamdrive.xcpx.workers.dev/teamDriveThemes", function(json) {
+    $.get("/teamDriveThemes", function(json) {
       teamDriveThemes = json.teamDriveThemes;
       $.each(json.teamDriveThemes, function(i, item) {
         $("#teamDriveThemeOptions").append(\`
@@ -213,7 +213,7 @@ var html = `
         });
         $.ajax({
           type: "POST",
-          url: "https://teamdrive.xcpx.workers.dev/drive",
+          url: "/drive",
           data: JSON.stringify({
             teamDriveName: $("input[id=teamDriveName]").val(),
             teamDriveThemeId: $("input[name=teamDriveTheme]:checked").val(),
