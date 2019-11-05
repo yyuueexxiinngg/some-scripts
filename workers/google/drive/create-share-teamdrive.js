@@ -1,11 +1,17 @@
 var authConfig = {
-  version: "1.0.0",
+  version: "1.0.1",
+  dailyLimit: true, // 是否限制每一个邮箱每天只能提交一次请求
   client_id: "",
   client_secret: "",
-  refresh_token: "" // 授权 token
+  refresh_token: "", // 授权 token
+  domain: "", // 面页中显示本站团队盘域, 可不填
+  // 黑名单, 免费版没有数据库, 一个可行思路是从自己服务器上获取, 可自行实现
+  black_list: ["example@gmail.com"]
 };
 
 var gd;
+
+var today;
 
 var html = `
 <!DOCTYPE html>
@@ -41,7 +47,12 @@ var html = `
         <div class="row">
           <div class="col-sm-8 offset-sm-2 col-md-6 offset-md-3 text-center">
             <h1>创建Google TeamDrive</h1>
-             <p>
+         ${
+           authConfig.domain
+             ? ` <h5>本站团队盘域为:  ${authConfig.domain}</h5>`
+             : ""
+         }
+            <p>
               后端多个API请求, 过程耗时较长, 请耐心等待,
               <span style="color: red"><b>切勿重复提交</b></span>
             </p>
@@ -133,8 +144,9 @@ var html = `
       </div>
     </div>
     <footer class="page-footer font-small blue">
+
       <div class="footer-copyright text-center py-3">
-        © 2019 Copyright:
+        © 2019 源码:
         <a
           href="https://github.com/yyuueexxiinngg/some-scripts/blob/master/workers/google/drive/create-share-teamdrive.js"
         >
@@ -220,15 +232,14 @@ var html = `
             emailAddress: $("input[id=emailAddress]").val()
           }), // or JSON.stringify ({name: 'jonas'}),
           success: function(data) {
-            alert("成功!");
             $("#loadMe").modal("hide");
+            alert("成功!");
           },
           error: function(request, status, error) {
-            alert(request.responseText);
             $("#loadMe").modal("hide");
+            alert("失败!" + request.responseText);
           },
-          contentType: "application/json",
-          dataType: "json"
+          contentType: "application/json"
         });
       });
     });
@@ -248,11 +259,23 @@ addEventListener("fetch", event => {
   event.respondWith(handleRequest(event.request));
 });
 
+var dailyLimit = [];
+
 /**
  * Fetch and log a request
  * @param {Request} request
  */
 async function handleRequest(request) {
+  if (authConfig.dailyLimit) {
+    if (!today) today = new Date().getDate();
+
+    // Remove email rate limit every day
+    if (new Date().getDate() != today) {
+      today = new Date().getDate();
+      dailyLimit.length = 0;
+    }
+  }
+
   if (gd == undefined) {
     gd = new googleDrive(authConfig);
   }
@@ -271,14 +294,43 @@ async function handleRequest(request) {
       });
     case "/drive":
       if (request.method === "POST") {
-        let result = await gd.createAndShareTeamDrive(request);
-        return new Response(JSON.stringify(result), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
+        const requestBody = await request.json();
+
+        if (authConfig.dailyLimit) {
+          if (dailyLimit.includes(requestBody.emailAddress)) {
+            return new Response("每天只允许提交一次", {
+              status: 429,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            });
+          } else {
+            dailyLimit.push(requestBody.emailAddress);
           }
-        });
+        }
+
+        if (authConfig.black_list.includes(requestBody.emailAddress)) {
+          return new Response("Failed", {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          });
+        }
+
+        try {
+          let result = await gd.createAndShareTeamDrive(requestBody);
+          return new Response(JSON.stringify(result), {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          });
+        } catch (err) {
+          return new Response(err.toString(), {
+            status: 500
+          });
+        }
       } else if (request.method === "OPTIONS") {
         return new Response("", {
           status: 200,
@@ -327,75 +379,69 @@ class googleDrive {
     return await response.json();
   }
 
-  async createAndShareTeamDrive(request) {
-    try {
-      const requestBody = await request.json();
-
-      // Create team drive
-      console.log("Creating TeamDrive");
-      let url = "https://www.googleapis.com/drive/v3/drives";
-      let requestOption = await this.requestOption(
-        { "Content-Type": "application/json" },
-        "POST"
-      );
-      let params = { requestId: uuidv4() };
-      url += "?" + this.enQuery(params);
-      let post_data = {
-        name: requestBody.teamDriveName
-      };
-      if (
-        requestBody.teamDriveThemeId &&
-        requestBody.teamDriveThemeId !== "random"
-      ) {
-        post_data.themeId = requestBody.teamDriveThemeId;
-      }
-      requestOption.body = JSON.stringify(post_data);
-      let response = await fetch(url, requestOption);
-      let result = await response.json();
-      const teamDriveId = result.id;
-      console.log("Created TeamDrive ID", teamDriveId);
-
-      // Get created drive user permission ID
-      console.log(`Getting creator permission ID`);
-      url = `https://www.googleapis.com/drive/v3/files/${teamDriveId}/permissions`;
-      params = { supportsAllDrives: true };
-      params.fields = "permissions(id,emailAddress)";
-      url += "?" + this.enQuery(params);
-      requestOption = await this.requestOption();
-      response = await fetch(url, requestOption);
-      result = await response.json();
-      const currentUserPermissionID = result.permissions[0].id;
-      console.log(currentUserPermissionID);
-
-      // Share team drive with email address
-      console.log(`Sharing the team drive to ${requestBody.emailAddress}`);
-      url = `https://www.googleapis.com/drive/v3/files/${teamDriveId}/permissions`;
-      params = { supportsAllDrives: true };
-      url += "?" + this.enQuery(params);
-      requestOption = await this.requestOption(
-        { "Content-Type": "application/json" },
-        "POST"
-      );
-      post_data = {
-        role: "organizer",
-        type: "user",
-        emailAddress: requestBody.emailAddress
-      };
-      requestOption.body = JSON.stringify(post_data);
-      response = await fetch(url, requestOption);
-      await response.json();
-
-      // Delete creator from the team drive
-      console.log("Deleting creator from the team drive");
-      url = `https://www.googleapis.com/drive/v3/files/${teamDriveId}/permissions/${currentUserPermissionID}`;
-      params = { supportsAllDrives: true };
-      url += "?" + this.enQuery(params);
-      requestOption = await this.requestOption({}, "DELETE");
-      response = await fetch(url, requestOption);
-      return await response.json();
-    } catch (e) {
-      return e;
+  async createAndShareTeamDrive(requestBody) {
+    // Create team drive
+    console.log("Creating TeamDrive");
+    let url = "https://www.googleapis.com/drive/v3/drives";
+    let requestOption = await this.requestOption(
+      { "Content-Type": "application/json" },
+      "POST"
+    );
+    let params = { requestId: uuidv4() };
+    url += "?" + this.enQuery(params);
+    let post_data = {
+      name: requestBody.teamDriveName
+    };
+    if (
+      requestBody.teamDriveThemeId &&
+      requestBody.teamDriveThemeId !== "random"
+    ) {
+      post_data.themeId = requestBody.teamDriveThemeId;
     }
+    requestOption.body = JSON.stringify(post_data);
+    let response = await fetch(url, requestOption);
+    let result = await response.json();
+    const teamDriveId = result.id;
+    console.log("Created TeamDrive ID", teamDriveId);
+
+    // Get created drive user permission ID
+    console.log(`Getting creator permission ID`);
+    url = `https://www.googleapis.com/drive/v3/files/${teamDriveId}/permissions`;
+    params = { supportsAllDrives: true };
+    params.fields = "permissions(id,emailAddress)";
+    url += "?" + this.enQuery(params);
+    requestOption = await this.requestOption();
+    response = await fetch(url, requestOption);
+    result = await response.json();
+    const currentUserPermissionID = result.permissions[0].id;
+    console.log(currentUserPermissionID);
+
+    // Share team drive with email address
+    console.log(`Sharing the team drive to ${requestBody.emailAddress}`);
+    url = `https://www.googleapis.com/drive/v3/files/${teamDriveId}/permissions`;
+    params = { supportsAllDrives: true };
+    url += "?" + this.enQuery(params);
+    requestOption = await this.requestOption(
+      { "Content-Type": "application/json" },
+      "POST"
+    );
+    post_data = {
+      role: "organizer",
+      type: "user",
+      emailAddress: requestBody.emailAddress
+    };
+    requestOption.body = JSON.stringify(post_data);
+    response = await fetch(url, requestOption);
+    await response.json();
+
+    // Delete creator from the team drive
+    console.log("Deleting creator from the team drive");
+    url = `https://www.googleapis.com/drive/v3/files/${teamDriveId}/permissions/${currentUserPermissionID}`;
+    params = { supportsAllDrives: true };
+    url += "?" + this.enQuery(params);
+    requestOption = await this.requestOption({}, "DELETE");
+    response = await fetch(url, requestOption);
+    return await response.json();
   }
 
   async accessToken() {
