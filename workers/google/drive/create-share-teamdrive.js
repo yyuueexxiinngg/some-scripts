@@ -1,5 +1,5 @@
 var authConfig = {
-  version: "1.0.1",
+  version: "1.0.1-fix1",
   dailyLimit: true, // 是否限制每一个邮箱每天只能提交一次请求
   client_id: "",
   client_secret: "",
@@ -47,6 +47,7 @@ var html = `
         <div class="row">
           <div class="col-sm-8 offset-sm-2 col-md-6 offset-md-3 text-center">
             <h1>创建Google TeamDrive</h1>
+             <p>${authConfig.version}</p>
          ${
            authConfig.domain
              ? ` <h5>本站团队盘域为:  ${authConfig.domain}</h5>`
@@ -230,7 +231,7 @@ var html = `
             teamDriveName: $("input[id=teamDriveName]").val(),
             teamDriveThemeId: $("input[name=teamDriveTheme]:checked").val(),
             emailAddress: $("input[id=emailAddress]").val()
-          }), // or JSON.stringify ({name: 'jonas'}),
+          }),
           success: function(data) {
             $("#loadMe").modal("hide");
             alert("成功!");
@@ -320,7 +321,7 @@ async function handleRequest(request) {
 
         try {
           let result = await gd.createAndShareTeamDrive(requestBody);
-          return new Response(JSON.stringify(result), {
+          return new Response("OK", {
             status: 200,
             headers: {
               "Content-Type": "application/json"
@@ -441,7 +442,7 @@ class googleDrive {
     url += "?" + this.enQuery(params);
     requestOption = await this.requestOption({}, "DELETE");
     response = await fetch(url, requestOption);
-    return await response.json();
+    return await response.text();
   }
 
   async accessToken() {
