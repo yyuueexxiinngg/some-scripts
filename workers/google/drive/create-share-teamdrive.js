@@ -300,10 +300,7 @@ async function handleRequest(request) {
         if (authConfig.dailyLimit) {
           if (dailyLimit.includes(requestBody.emailAddress)) {
             return new Response("每天只允许提交一次", {
-              status: 429,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              status: 429
             });
           } else {
             dailyLimit.push(requestBody.emailAddress);
@@ -312,20 +309,14 @@ async function handleRequest(request) {
 
         if (authConfig.black_list.includes(requestBody.emailAddress)) {
           return new Response("Failed", {
-            status: 429,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            status: 429
           });
         }
 
         try {
           let result = await gd.createAndShareTeamDrive(requestBody);
           return new Response("OK", {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            status: 200
           });
         } catch (err) {
           return new Response(err.toString(), {
