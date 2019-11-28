@@ -22,7 +22,7 @@ async function run() {
   } else {
     warpConf = {
       id: null,
-      publicKey: publicKey, // WireGuard pubic key
+      publicKey: publicKey, // WireGuard public key
       token: null, // Cloudflare access token
       isWarpPlusEnabled: null
     };
