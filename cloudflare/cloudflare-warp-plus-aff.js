@@ -2,6 +2,8 @@
 const referrer = "YOUR REFERRER ID";
 const timesToLoop = 10;
 const retryTimes = 5;
+// How many sec to sleep, currently rate limit might be apply to per min per ip from my observation.
+const sleepSeconds = 60;
 
 const https = require("https");
 const zlib = require("zlib");
@@ -11,13 +13,14 @@ async function init() {
     if (await run()) {
       console.log(i + 1, "OK");
     } else {
-      console.log(i + 1, "Error");
+      console.log(i + 1, `Error, will sleep for ${sleepSeconds}s`);
       for (let r = 0; r < retryTimes; r++) {
+        await sleep(sleepSeconds * 1000);
         if (await run()) {
           console.log(i + 1, "Retry #" + (r + 1), "OK");
           break;
         } else {
-          console.log(i + 1, "Retry #" + (r + 1), "Error");
+          console.log(i + 1, "Retry #" + (r + 1), `Error, will sleep for ${sleepSeconds}s`);
           if (r === retryTimes - 1) {
             return;
           }
@@ -57,6 +60,10 @@ async function run() {
     };
 
     const req = https.request(options, res => {
+      if(res.statusCode === 429) {
+        // Too many requests
+        resolve(false);
+      }
       const gzip = zlib.createGunzip();
       // const buffer = [];
       res.pipe(gzip);
@@ -82,6 +89,10 @@ async function run() {
     req.write(postData);
     req.end();
   });
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function genString(length) {
