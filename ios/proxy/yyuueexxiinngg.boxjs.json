@@ -8,6 +8,11 @@
     {
       "id": "embyRoutes",
       "name": "Emby线路优选",
+      "descs_html": [
+        "<h4 align=\"center\">脚本配置可使用辅助工具生成<a href=\"https://tools.hoshi.tech/embyroutes_config\">脚本配置生成工具</a></h4>",
+        "<br />",
+        "<p>以下内容均为JSON，如您不确定如何配置，请使用辅助工具。</p>"
+      ],
       "keys": [
         "@yyuueexxiinngg.embyRoutes",
         "@yyuueexxiinngg.bestEmbyRoutes"
