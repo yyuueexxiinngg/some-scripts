@@ -32,7 +32,7 @@ async function embyRoutesTaskMain() {
     const bestRoutes = {};
     for (let i = 0; i < config["embyRoutes"].length; i++) {
         const emby = config["embyRoutes"][i];
-        if (!emby["enabled"]) break;
+        if (!emby["enabled"]) continue;
 
         env.log(`-------------${emby["name"]}----------------`)
         env.log(`${emby["name"]} 开始检测线路... 共计${emby["urls"].length}条`);
