@@ -1,0 +1,43 @@
+{
+  "id": "yyuueexxiinngg.app.sub",
+  "name": "yyuueexxiinngg应用订阅",
+  "author": "@yyuueexxiinngg",
+  "icon": "https://avatars.githubusercontent.com/u/20928306",
+  "repo": "https://github.com/yyuueexxiinngg/some-scripts",
+  "apps": [
+    {
+      "id": "embyRoutes",
+      "name": "Emby线路优选",
+      "keys": [
+        "@yyuueexxiinngg.embyRoutes",
+        "@yyuueexxiinngg.bestEmbyRoutes"
+      ],
+      "settings": [
+        {
+          "id": "@yyuueexxiinngg.embyRoutes",
+          "name": "EmbyRoutes配置",
+          "val": "",
+          "type": "textarea",
+          "autoGrow": true,
+          "rows": 1,
+          "desc": "您可使用工具辅助生成配置，地址：https://tools.hoshi.tech/embyroutes_config"
+        },
+        {
+          "id": "@yyuueexxiinngg.bestEmbyRoutes",
+          "name": "”最优Emby路线",
+          "val": "",
+          "type": "textarea",
+          "autoGrow": true,
+          "rows": 1,
+          "desc": "当运行一次Task任务后或自动更新此处值，如您不确定请勿更改此处内容"
+        }
+      ],
+      "author": "@yyuueexxiinngg",
+      "repo": "https://github.com/yyuueexxiinngg/some-scripts",
+      "icons": [
+        "https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Emby.png"
+      ],
+      "script": "https://raw.githubusercontent.com/yyuueexxiinngg/some-scripts/master/ios/proxy/files/EmbyRoutes.task.js"
+    }
+  ]
+}
