@@ -1,0 +1,7 @@
+{
+  "name": "yyuueexxiinngg",
+  "description": "https://github.com/yyuueexxiinngg/some-scripts",
+  "task": [
+    "0 18 * * * https://raw.githubusercontent.com/yyuueexxiinngg/some-scripts/master/ios/proxy/files/EmbyRoutes.task.js, tag=Emby线路优选-任务, img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Emby.png, enabled=true"
+  ]
+}
