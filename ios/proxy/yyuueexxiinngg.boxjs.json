@@ -42,7 +42,7 @@
       "icons": [
         "https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Emby.png"
       ],
-      "script": "https://raw.githubusercontent.com/yyuueexxiinngg/some-scripts/master/ios/proxy/files/EmbyRoutes.task.js"
+      "script": "https://raw.githubusercontent.com/yyuueexxiinngg/some-scripts/test/ios/proxy/files/EmbyRoutes.task.js"
     }
   ]
 }

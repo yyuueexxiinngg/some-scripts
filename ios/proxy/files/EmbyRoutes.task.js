@@ -14,7 +14,8 @@
  cron "0 18 * * *" script-path=https://raw.githubusercontent.com/yyuueexxiinngg/some-scripts/master/ios/proxy/files/EmbyRoutes.task.js,tag=Emby线路优选-任务,enable=true
  */
 
-const env = new Env('Emby线路优选-任务');
+const scriptName = 'Emby线路优选-任务-测试';
+const env = new Env(scriptName);
 let timeOut = 10 * 1000;
 const config = env.getjson("@yyuueexxiinngg.embyRoutes", null);
 (async function () {
@@ -25,14 +26,13 @@ const config = env.getjson("@yyuueexxiinngg.embyRoutes", null);
 
 async function embyRoutesTaskMain() {
     if (!config) {
-        env.msg('Emby线路优选-任务', '配置未完成或JSON出错', '请先在BoxJS中检查保存配置');
+        env.msg(scriptName, '配置未完成或JSON出错', '请先在BoxJS中检查保存配置');
         return {};
     }
     timeOut = config["timeOut"] || 10000;
     const bestRoutes = {};
     for (let i = 0; i < config["embyRoutes"].length; i++) {
         const emby = config["embyRoutes"][i];
-        if (!emby["enabled"]) continue;
 
         env.log(`-------------${emby["name"]}----------------`)
         env.log(`${emby["name"]} 开始检测线路... 共计${emby["urls"].length}条`);
@@ -48,7 +48,16 @@ async function embyRoutesTaskMain() {
             env.log(`${result["url"].hostname} ： ${result["time"]}s`);
         }
 
-        bestRoutes[emby["name"]] = results[0]["url"];
+        const bestHttp = results.find(result => result["url"].protocol === "http:");
+        const bestHttps = results.find(result => result["url"].protocol === "https:");
+
+        bestRoutes[emby["id"]] = {
+            name: emby["name"],
+            rewriteEnabled: emby["rewriteEnabled"],
+            best: results[0]["url"],
+            http: bestHttp ? bestHttp["url"].href : "",
+            https: bestHttps ? bestHttps["url"].href : ""
+        };
 
         env.log(`-------------${emby["name"]}----------------`)
     }
@@ -56,17 +65,91 @@ async function embyRoutesTaskMain() {
     env.log(`-----------------------------------`);
     let notification = '最优路线：\n';
     env.log(`全部检测完毕，最优路线：`);
-    for (const i in bestRoutes) {
-        env.log(`${i} : ${bestRoutes[i]}`);
-        notification += `${i} : ${bestRoutes[i]}\n`;
+    for (const id in bestRoutes) {
+        env.log(`${bestRoutes[id]["name"]} 最优路线: ${bestRoutes[id]['best']}`);
+        notification += `${bestRoutes[id]["name"]} 最优路线 : ${bestRoutes[id]['best']}\n`;
+        if (bestRoutes[id]['http']) {
+            env.log(`${bestRoutes[id]["name"]} 最优HTTP路线 : ${bestRoutes[id]['http']}`);
+            notification += `${bestRoutes[id]["name"]} 最优HTTP路线 : ${bestRoutes[id]['http']}\n`;
+        }
+        if (bestRoutes[id]['http']) {
+            env.log(`${bestRoutes[id]["name"]} 最优HTTPS路线 : ${bestRoutes[id]['https']}`);
+            notification += `${bestRoutes[id]["name"]} 最优HTTPS路线 : ${bestRoutes[id]['https']}\n`;
+        }
+        env.log(`-----------------------------------`);
+        notification += `-----------------------------------\n`;
     }
-    env.msg('Emby线路优选-任务', '全部检测完毕', notification);
+    notification += "开始Cloudflare DoH查询IP";
+    env.msg(scriptName, '全部检测完毕', notification);
+
+    for (const id in bestRoutes) {
+        if (!bestRoutes[id]['rewriteEnabled']) {
+            delete bestRoutes[id]['rewriteEnabled'];
+            continue;
+        }
+        let hostnameForHttp = "";
+        let hostnameForHttps = ""
+        if (bestRoutes[id]['http']) {
+            hostnameForHttp = new URL(bestRoutes[id]['http']).hostname;
+        }
+        if (bestRoutes[id]['https']) {
+            hostnameForHttps = new URL(bestRoutes[id]['https']).hostname;
+        }
+        if (hostnameForHttp === hostnameForHttps) {
+            const ip = await getIp(hostnameForHttp);
+            bestRoutes[id]['httpIp'] = ip;
+            bestRoutes[id]['httpsIp'] = ip;
+        } else {
+            if (hostnameForHttp) {
+                bestRoutes[id]['httpIp'] = await getIp(hostnameForHttp);
+            }
+            if (hostnameForHttps) {
+                bestRoutes[id]['httpsIp'] = await getIp(hostnameForHttps);
+            }
+        }
+        delete bestRoutes[id]['rewriteEnabled'];
+    }
 
     if (env.setjson(bestRoutes, "@yyuueexxiinngg.bestEmbyRoutes")) {
-        env.log(`最优路线配置保存成功`);
+        env.msg(scriptName, '最优路线配置保存成功', '');
     } else {
-        env.log(`最优路线配置保存失败`);
+        env.msg(scriptName, '最优路线配置保存失败', '');
     }
+}
+
+async function getIp(hostname) {
+    return new Promise((resolve, reject) => {
+        const requestOps = {
+            url: `https://cloudflare-dns.com/dns-query?name=${hostname}&type=A`,
+            headers: {
+                "accept": "application/dns-json"
+            }
+        };
+
+        env.get(requestOps, (error, response, data) => {
+            if (error) {
+                env.log(`${hostname} DNS解析请求失败，请确保网络环境能够访问cloudflare-dns.com后重试`, JSON.stringify(error));
+                env.msg(scriptName, 'DNS解析请求失败', `${hostname} DNS解析请求失败，请确保网络环境能够访问cloudflare-dns.com后重试`);
+                resolve();
+            }
+            data = JSON.parse(data);
+            if (data["Status"] === 0) {
+                for (let i = 0; i < data["Answer"].length; i++) {
+                    if (data["Answer"][i]["type"] === 1) {
+                        const ip = (data["Answer"][i]["data"]);
+                        env.log(`${hostname} 成功查询到IP`)
+                        resolve(ip);
+                        break;
+                    }
+                }
+                resolve();
+            } else {
+                env.log(`${hostname} DNS解析请求失败`, JSON.stringify(data));
+                env.msg(scriptName, 'DNS解析请求失败', `DNS解析请求失败，请确保 ${hostname} 能够解析`);
+                resolve();
+            }
+        })
+    })
 }
 
 function embyRouteTest(url) {

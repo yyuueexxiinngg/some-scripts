@@ -1,42 +1,99 @@
-// $request.url
-const env = new Env('Emby线路优选-重写')
+// 本脚本会在每次请求时运行，运行时间大致为0.035秒上下
+const scriptName = 'Emby线路优选-重写-测试';
+const env = new Env(scriptName)
 let url = $request.url;
 
+let headers = $request.headers;
 const config = env.getjson("@yyuueexxiinngg.embyRoutes", null);
 const bestRoutes = env.getjson("@yyuueexxiinngg.bestEmbyRoutes", null);
 const canSendNotifications = url.indexOf('/Views') !== -1 || url.indexOf("Authenticate") !== -1;
+const scheme = $request.scheme;
 
-env.done(embyRoutesRewriteMain());
+(async function () {
+    const result = await embyRoutesRewriteMain();
+    env.done(result);
+})();
 
-function embyRoutesRewriteMain() {
+async function embyRoutesRewriteMain() {
     if (!config || !bestRoutes) {
-        if (canSendNotifications) env.msg('Emby线路优选-重写', '配置未完成或未运行Task', '请先在BoxJS中保存配置并至少运行过一次Task后使用重写');
+        if (canSendNotifications) env.msg(scriptName, '配置未完成或未运行Task', '请先在BoxJS中保存配置并至少运行过一次Task后使用重写');
         return {};
     } else {
         for (const emby of config["embyRoutes"]) {
-            if (url.indexOf(emby["rewriteUrl"]) !== -1) {
-                if (!emby["enabled"]) return {};
-                const bestRouteUrl = bestRoutes[emby["name"]]
-                if (!bestRouteUrl) {
-                    if (canSendNotifications) env.msg('Emby线路优选-重写', `${emby["name"]}：未找到最优路线`, '请先至少运行过一次Task后使用重写，可在代理软件或者BoxJS中手动触发Task');
+            const rewriteUrl = scheme === 'https' ? emby["rewriteUrlHttps"] : emby["rewriteUrlHttp"];
+            if (url.indexOf(rewriteUrl) !== -1) {
+                if (!emby["rewriteEnabled"]) return {};
+                const bestRouteUrlConfig = bestRoutes[emby["id"]]
+                if (!bestRouteUrlConfig) {
+                    if (canSendNotifications) env.msg(scriptName, `${emby["name"]}：未找到最优路线`, '请先至少运行过一次Task后使用重写，可在代理软件或者BoxJS中手动触发Task');
                     return {};
                 }
+                const bestRouteUrl = bestRouteUrlConfig[scheme];
+                if (!bestRouteUrl) {
+                    if (canSendNotifications) env.msg(scriptName, `${emby["name"]}：未找到${scheme.toUpperCase()}最优路线`, `请确定您配置了${scheme.toUpperCase()}线路并运行了Task`);
+                    return {};
+                }
+                const bestRouteIp = bestRouteUrlConfig[`${scheme}Ip`];
+                if (!bestRouteIp) {
+                    if (canSendNotifications) env.msg(scriptName, `${emby["name"]}：未找到${scheme.toUpperCase()}最优路线IP地址`, `请确定您任务中成功解析了服务器地址IP`);
+                    return {};
+                }
+
                 const oldUrl = new URL(url);
                 const newUrl = new URL(bestRouteUrl);
+                // 保存读取时间比每次都设置DNS记录更快
+                // const dnsCacheHistory = env.getjson(`@yyuueexxiinngg.embyRoutes.dnsCacheHistory`, {});
+                // let lastTime = dnsCacheHistory[`${emby["name"]}_${scheme}`];
+                // let lastTime = bestRouteUrlConfig[scheme]["dnsCacheTime"];
+                let lastTime = env.getval(`@yyuueexxiinngg.embyRoutes.dnsCacheTime_${emby["id"]}`);
+                if (!lastTime) {
+                    lastTime = 0;
+                }
+                const shouldSetRecord = ((env.startTime - lastTime) / 1000) > 29;
+                if (shouldSetRecord) {
+                    const dnsRecord = {
+                        host: oldUrl.hostname,
+                        ips: [bestRouteIp],
+                        ttl: 30
+                    };
+                    const dnsRet = await setDnsRecords(dnsRecord);
+                    // dnsCacheHistory[`${emby["name"]}_${scheme}`] = this.startTime;
+                    // env.setjson(dnsCacheHistory, `@yyuueexxiinngg.embyRoutes.dnsCacheHistory`);
+                    // bestRouteUrlConfig[scheme]["dnsCacheTime"] = env.startTime;
+                    // env.setjson(bestRouteUrlConfig, "@yyuueexxiinngg.bestEmbyRoutes")
+                    env.setval(env.startTime, `@yyuueexxiinngg.embyRoutes.dnsCacheTime_${emby["id"]}`);
+                    if (dnsRet && dnsRet.error) {
+                        env.msg(scriptName, 'DNS设置错误', `为${oldUrl.hostname}设置DNS失败`);
+                        return {};
+                    }
+                }
+
                 if (oldUrl.host === newUrl.host) {
-                    env.msg('Emby线路优选-重写', '配置错误', `检测到当前请求的域名${oldUrl.hostname}与最优路线的域名相同，请检查重写配置，不要重写真实Emby服务器地址！`);
+                    env.msg(scriptName, '配置错误', `检测到当前请求的域名${oldUrl.hostname}与最优路线的域名相同，请检查重写配置，不要重写真实Emby服务器地址！`);
                     return {};
                 }
-                env.log(`Location： ${newUrl.origin}${oldUrl.pathname}${oldUrl.search}`);
+                headers["Host"] = newUrl.host;
                 return {
-                    status: "HTTP/1.1 307 Temporary Redirect",
-                    headers: {"Location": `${newUrl.origin}${oldUrl.pathname}${oldUrl.search}`},
-                    body: "Redirected by Emby线路优选-重写"
+                    headers: headers,
                 };
             }
         }
     }
     return {};
+}
+
+async function setDnsRecords(record) {
+    const message = {
+        action: "dns_update_cache",
+        content: record
+    };
+    try {
+        return await $configuration.sendMessage(message);
+    } catch (e) {
+        // Normally will never happen.
+        env.log(e);
+        return null;
+    }
 }
 
 // @formatter:off
